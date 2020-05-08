@@ -1,5 +1,10 @@
+//PIXI Settings
+PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+
 const WIDTH = 1920;
 const HEIGHT = 1080;
+
+var movementSpeed = 2;
 
 var configuration = {
   width: WIDTH,
@@ -14,9 +19,13 @@ let player, otherPlayer, socket;
 let keys = {};
 
 let game = new PIXI.Application(configuration);
+let viewport = new PIXI.Container();
+
+//viewport.scale.set(2);
 
 document.body.appendChild(game.view);
 game.renderer.resize(window.innerWidth, window.innerHeight);
+game.stage.addChild(viewport);
 
 frontLoader = game.loader;
 preload();
@@ -36,7 +45,7 @@ function initialize() {
   this.socket = io();
   socket = this.socket;
   this.otherPlayers = new PIXI.Container();
-  game.stage.addChild(self.otherPlayers);
+  viewport.addChild(self.otherPlayers);
   this.socket.on("currentPlayers", function (players) {
     Object.keys(players).forEach(function (id) {
       if (players[id].playerId === self.socket.id) {
@@ -50,14 +59,14 @@ function initialize() {
     addOtherPlayers(self, playerInfo);
   });
   this.socket.on("disconnect", function (playerId) {
-    self.otherPlayers.children.forEach(function (otherPlayer) {
+    viewport.children.forEach(function (otherPlayer) {
       if (playerId === otherPlayer.playerId) {
         otherPlayer.destroy();
       }
     });
   });
   this.socket.on("playerMoved", function (playerInfo) {
-    self.otherPlayers.children.forEach(function (otherPlayer) {
+    viewport.children.forEach(function (otherPlayer) {
       if (playerInfo.playerId === otherPlayer.playerId) {
         //otherPlayer.pivot = playerInfo.rotation;
         otherPlayer.x = playerInfo.x;
@@ -84,8 +93,8 @@ function keysUp(e) {
 }
 
 function gameLoop(delta) {
-  player.vx = 1;
-  player.vy = 1;
+  player.vx = movementSpeed;
+  player.vy = movementSpeed;
 
   if (keys["87"]) {
     player.y -= player.vy;
@@ -115,12 +124,13 @@ function gameLoop(delta) {
       //rotation: player.pivot,
     });
   }
-
   player.oldPosition = {
     x: player.x,
     y: player.y,
     //rotation: player.pivot,
   };
+
+  //zoom();
 }
 
 function addPlayer(self, playerInfo) {
@@ -133,7 +143,7 @@ function addPlayer(self, playerInfo) {
     playerSprite.tint = 0xff0000;
   }
 
-  player = game.stage.addChild(playerSprite);
+  player = viewport.addChild(playerSprite);
 
   player.x = playerInfo.x;
   player.y = playerInfo.y;
@@ -151,9 +161,29 @@ function addOtherPlayers(self, playerInfo) {
   } else {
     playerSprite.tint = 0xff0000;
   }
-  playerSprite.x = playerInfo.x;
-  playerSprite.y = playerInfo.y;
 
   const otherPlayer = self.otherPlayers.addChild(playerSprite);
   otherPlayer.playerId = playerInfo.playerId;
+  otherPlayer.x = playerInfo.x;
+  otherPlayer.y = playerInfo.y;
+
+  viewport.addChild(otherPlayer);
 }
+
+/*
+function zoom() {
+  const scaleDelta = 0.1;
+
+  const offsetX = -(player.x * scaleDelta);
+  const offsetY = -(player.y * scaleDelta);
+
+  const currentScale = viewport.scale.x;
+  let nScale = currentScale + scaleDelta;
+
+  viewport.pivot.x = 0;
+  viewport.pivot.y = 0;
+  viewport.position.x += offsetX;
+  viewport.position.y += offsetY;
+  viewport.scale.set(nScale);
+}
+*/
