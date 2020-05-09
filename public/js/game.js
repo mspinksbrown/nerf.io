@@ -14,11 +14,15 @@ var configuration = {
   backgroundColor: 0xfaf7dc,
 };
 
-let player, otherPlayer, socket;
+let player, otherPlayer, socket; //Sever objects
+
+let zoomFactor = 2.333,
+  direction = 0; //Client-side parameters
 
 let keys = {};
 
 let game = new PIXI.Application(configuration);
+let menu = new PIXI.Container();
 let viewport = new PIXI.Container();
 
 //viewport.scale.set(2);
@@ -26,6 +30,7 @@ let viewport = new PIXI.Container();
 document.body.appendChild(game.view);
 game.renderer.resize(window.innerWidth, window.innerHeight);
 game.stage.addChild(viewport);
+//game.stage.addChild(viewport);
 
 frontLoader = game.loader;
 preload();
@@ -98,39 +103,53 @@ function gameLoop(delta) {
 
   if (keys["87"]) {
     player.y -= player.vy;
+    direction = 1; //Up
+  } else if (keys["87"] == false) {
+    direction = 0;
   }
   if (keys["83"]) {
     player.y += player.vy;
+    direction = 3; //owm
+  } else if (keys["83"] == false) {
+    direction = 0;
   }
   if (keys["65"]) {
     player.x -= player.vx;
+    direction = 2; //Left
+  } else if (keys["65"] == false) {
+    direction = 0;
   }
   if (keys["68"]) {
     player.x += player.vx;
+    direction = 4; // Right
+  } else if (keys["68"] == false) {
+    direction = 0;
   }
 
   var x = player.x;
   var y = player.y;
-  //var r = player.pivot;
+  var r = player.rotation;
 
   if (
     player.oldPosition &&
-    (x !== player.oldPosition.x || y !== player.oldPosition.y)
-    //r !== player.oldPosition.rotation)
+    (x !== player.oldPosition.x ||
+      y !== player.oldPosition.y ||
+      r !== player.oldPosition.rotation)
   ) {
     socket.emit("playerMovement", {
       x: player.x,
       y: player.y,
-      //rotation: player.pivot,
+      rotation: player.rotation,
     });
   }
   player.oldPosition = {
     x: player.x,
     y: player.y,
-    //rotation: player.pivot,
+    rotation: player.rotation,
   };
 
-  //zoom();
+  zoom();
+  //scroll();
 }
 
 function addPlayer(self, playerInfo) {
@@ -170,20 +189,49 @@ function addOtherPlayers(self, playerInfo) {
   viewport.addChild(otherPlayer);
 }
 
-/*
 function zoom() {
-  const scaleDelta = 0.1;
+  const scaleDelta = 0.01;
 
   const offsetX = -(player.x * scaleDelta);
   const offsetY = -(player.y * scaleDelta);
 
   const currentScale = viewport.scale.x;
-  let nScale = currentScale + scaleDelta;
+  let nscale = currentScale + scaleDelta;
 
-  viewport.pivot.x = 0;
-  viewport.pivot.y = 0;
-  viewport.position.x += offsetX;
-  viewport.position.y += offsetY;
-  viewport.scale.set(nScale);
+  if (nscale < zoomFactor) {
+    player.pivot.x = 0;
+    player.pivot.y = 0;
+    viewport.position.x += offsetX;
+    viewport.position.y += offsetY;
+    viewport.scale.set(nscale);
+  }
+}
+
+/* scroll() {
+  const scrollDelta = 0.01;
+
+  const offsetX = -(viewport.x * scrollDelta);
+  const offsetY = -(viewport.y * scrollDelta);
+
+  switch (direction) {
+    default:
+      break;
+    case 0: //(No Direction)
+      viewport.position.x;
+      viewport.position.y;
+      break;
+    case 1: //Up
+      viewport.position.y -= offsetY;
+      break;
+    case 2:
+      viewport.position.x -= offsetX;
+      break;
+    case 3:
+      viewport.position.y += offsetY;
+      break;
+    case 4:
+      viewport.position.x += offsetX;
+      break;
+  }
 }
 */

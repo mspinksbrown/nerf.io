@@ -14,15 +14,25 @@ app.get("/", function (req, res) {
 
 //When a connection with the server is establsihed
 io.on("connection", function (socket) {
-  console.log("a user connected");
   // create a new player and add it to our players object
   players[socket.id] = {
+    name: "Player",
     rotation: 0,
     x: Math.floor(Math.random() * 700) + 50,
     y: Math.floor(Math.random() * 500) + 50,
     playerId: socket.id,
     team: Math.floor(Math.random() * 2) == 0 ? "red" : "blue",
   };
+  console.log(
+    "Player: " +
+      '"' +
+      players[socket.id].name +
+      '" ' +
+      "(ID: " +
+      players[socket.id].playerId +
+      ")" +
+      " has joined!"
+  );
   // send the players object to the new player
   socket.emit("currentPlayers", players);
   // update all other players of the new player
@@ -30,7 +40,16 @@ io.on("connection", function (socket) {
 
   // when a player disconnects, remove them from our players object
   socket.on("disconnect", function () {
-    console.log("user disconnected");
+    console.log(
+      "Player: " +
+        '"' +
+        players[socket.id].name +
+        '" ' +
+        "(ID: " +
+        players[socket.id].playerId +
+        ")" +
+        " has disconnected."
+    );
     // remove this player from our players object
     delete players[socket.id];
     // emit a message to all players to remove this player
