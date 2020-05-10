@@ -1,6 +1,8 @@
 //PIXI Settings
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 
+//Imports
+
 const WIDTH = 1920;
 const HEIGHT = 1080;
 
@@ -10,13 +12,13 @@ var configuration = {
   width: WIDTH,
   height: HEIGHT,
   autoResize: true,
-  resolution: devicePixelRatio,
-  backgroundColor: 0xfaf7dc,
+  resolution: window.devicePixelRatio,
+  backgroundColor: 0xbbe773,
 };
 
 let player, playerSprite, otherPlayer, otherPlayerSprite, socket; //Sever objects
 
-let zoomFactor = 2.333,
+let zoomFactor = 2,
   direction = 0; //Client-side parameters
 
 let keys = {};
@@ -41,6 +43,7 @@ function preload() {
   PIXI.Loader.shared
     .add("idle", "../../assets/images/anims/idle.json")
     .add("walk", "../../assets/images/anims/walk.json")
+    .add("LarcenyFont", "../../assets/fonts/Larceny/Larceny.xml.fnt")
     .load(initialize);
 }
 
@@ -106,33 +109,24 @@ function gameLoop(delta) {
     player.y -= player.vy;
     direction = 1; //Up
     currentAnimation = 1;
-  } else if (keys["87"] == false) {
-    direction = 0;
-    currentAnimation = 0;
   }
   if (keys["83"]) {
     player.y += player.vy;
     direction = 3; //owm
     currentAnimation = 1;
-  } else if (keys["83"] == false) {
-    direction = 0;
-    currentAnimation = 0;
   }
   if (keys["65"]) {
     player.x -= player.vx;
     direction = 2; //Left
     currentAnimation = 1;
-  } else if (keys["65"] == false) {
-    direction = 0;
-    currentAnimation = 0;
   }
   if (keys["68"]) {
     player.x += player.vx;
     direction = 4; // Right
     currentAnimation = 1;
-  } else if (keys["68"] == false) {
-    direction = 0;
-    currentAnimation = 0;
+  }
+  if (!keys["87"] && !keys["83"] && !keys["65"] && !keys["68"]) {
+    debugCollision();
   }
 
   var x = player.x;
@@ -158,14 +152,13 @@ function gameLoop(delta) {
   };
   zoom();
 
-  debugCollision();
   //scroll();
 }
 
 function addPlayer(self, playerInfo) {
   let idle = PIXI.Loader.shared.resources["walk"].spritesheet;
   let anim_idle = new PIXI.AnimatedSprite(idle.animations["walk"]);
-  anim_idle.animationSpeed = 0.5;
+  anim_idle.animationSpeed = 0.75;
   anim_idle.play();
 
   playerSprite = new PIXI.Container();
@@ -174,17 +167,18 @@ function addPlayer(self, playerInfo) {
 
   player = viewport.addChild(playerSprite);
 
-  const style = new PIXI.TextStyle({ fontFamily: "Larceny" });
-  const playerName = new PIXI.Text(playerInfo.name, style);
-  playerName.resolution = 10;
-  playerName.anchor.set(0.5);
-  playerName.scale.set(0.5);
+  const playerName = new PIXI.BitmapText(playerInfo.name, {
+    font: "100px Larceny",
+    align: "center",
+  });
 
-  playernameObj = viewport.addChild(playerName);
+  player.addChild(playerName);
   player.x = playerInfo.x;
   player.y = playerInfo.y;
   player.vx = 0;
   player.vy = 0;
+  player.pivot.x = 185 / 2;
+  player.pivot.y = 105 / 2;
 
   input();
 }
@@ -210,15 +204,15 @@ function addOtherPlayers(self, playerInfo) {
 function zoom() {
   const scaleDelta = 0.01;
 
-  const offsetX = -(player.x * scaleDelta);
-  const offsetY = -(player.y * scaleDelta);
+  offsetX = -(player.x * scaleDelta);
+  offsetY = -(player.y * scaleDelta);
 
   const currentScale = viewport.scale.x;
   let nscale = currentScale + scaleDelta;
 
   if (nscale < zoomFactor) {
-    //player.anchor.x = 0;
-    //player.anchor.y = 0;
+    playerSprite.pivot.x = 0;
+    playerSprite.pivot.y = 0;
     viewport.position.x += offsetX;
     viewport.position.y += offsetY;
     viewport.scale.set(nscale);
@@ -232,26 +226,13 @@ function debugCollision() {
   playerRectH = playerSprite.getBounds().height;
   var debug = new PIXI.Graphics();
   debug.name = `debug`;
-  debug.alpha = 0.1;
+  debug.alpha = 0.01;
   debug.beginFill(0xffff00);
   debug.lineStyle(1, 0xff0000);
   debug.drawRect(playerRectX, playerRectY, playerRectW, playerRectH);
-
-  const oldPRX = playerRectX;
-  const oldPRY = playerRectY;
-  const oldPRW = playerRectW;
-  const oldPRH = playerRectH;
-
-  if (
-    oldPRX != playerRectX ||
-    oldPRY != playerRectY ||
-    oldPRW != playerRectW ||
-    oldPRH != playerRectH
-  ) {
-    game.stage.addChild(debug);
-  } else {
-  }
+  game.stage.addChild(debug);
 }
+
 function serverUpdate(delta) {
   socket.on("gameUpdate", function (msg) {
     console.log(msg);

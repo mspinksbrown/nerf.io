@@ -6,4 +6,11 @@ body {
 
 canvas {
   display: block;
+  width: 100%;
+  height: 100%;
+}
+
+@font-face {
+  font-family: Larceny;
+  src: local("Larceny"), url(../assets/fonts/Larceny.ttf);
 }
