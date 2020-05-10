@@ -1,3 +1,5 @@
+//LAN Address: 10.61.97.149:8081 TESTING PURPOSES ONLY
+
 var express = require("express");
 var app = express();
 var server = require("http").Server(app);
@@ -68,4 +70,14 @@ io.on("connection", function (socket) {
 
 server.listen(8081, function () {
   console.log(`Listening on ${server.address().port}`);
+});
+
+var fs = require("fs");
+
+fs.watchFile("public/js/game.js", function (curr, prev) {
+  console.log("File " + '"game.js" has been modified');
+  io.emit(
+    "gameUpdate",
+    "There has been an update to the game file. Your page will now refresh."
+  );
 });

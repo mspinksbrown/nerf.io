@@ -14,7 +14,7 @@ var configuration = {
   backgroundColor: 0xfaf7dc,
 };
 
-let player, otherPlayer, socket; //Sever objects
+let player, playerSprite, otherPlayer, otherPlayerSprite, socket; //Sever objects
 
 let zoomFactor = 2.333,
   direction = 0; //Client-side parameters
@@ -24,7 +24,10 @@ let keys = {};
 let game = new PIXI.Application(configuration);
 let menu = new PIXI.Container();
 let viewport = new PIXI.Container();
+viewport.name = "viewport";
 
+let currentAnimation = 0;
+let anim;
 //viewport.scale.set(2);
 
 document.body.appendChild(game.view);
@@ -32,17 +35,13 @@ game.renderer.resize(window.innerWidth, window.innerHeight);
 game.stage.addChild(viewport);
 //game.stage.addChild(viewport);
 
-frontLoader = game.loader;
 preload();
 
 function preload() {
-  //frontLoader.baseURL = "../../assets";
-  frontLoader.add("player", "../../assets/head.png");
-  //frontLoader.onProgress.add(loadProgress);
-  //frontLoader.onComplete.add(doneLoading);
-  //frontLoader.onError.add(loadError);
-
-  frontLoader.load(initialize);
+  PIXI.Loader.shared
+    .add("idle", "../../assets/images/anims/idle.json")
+    .add("walk", "../../assets/images/anims/walk.json")
+    .load(initialize);
 }
 
 function initialize() {
@@ -79,6 +78,8 @@ function initialize() {
       }
     });
   });
+
+  //game.ticker.add(serverUpdate);
 }
 
 function input() {
@@ -104,26 +105,34 @@ function gameLoop(delta) {
   if (keys["87"]) {
     player.y -= player.vy;
     direction = 1; //Up
+    currentAnimation = 1;
   } else if (keys["87"] == false) {
     direction = 0;
+    currentAnimation = 0;
   }
   if (keys["83"]) {
     player.y += player.vy;
     direction = 3; //owm
+    currentAnimation = 1;
   } else if (keys["83"] == false) {
     direction = 0;
+    currentAnimation = 0;
   }
   if (keys["65"]) {
     player.x -= player.vx;
     direction = 2; //Left
+    currentAnimation = 1;
   } else if (keys["65"] == false) {
     direction = 0;
+    currentAnimation = 0;
   }
   if (keys["68"]) {
     player.x += player.vx;
     direction = 4; // Right
+    currentAnimation = 1;
   } else if (keys["68"] == false) {
     direction = 0;
+    currentAnimation = 0;
   }
 
   var x = player.x;
@@ -147,23 +156,31 @@ function gameLoop(delta) {
     y: player.y,
     rotation: player.rotation,
   };
-
   zoom();
+
+  debugCollision();
   //scroll();
 }
 
 function addPlayer(self, playerInfo) {
-  console.log("Player " + playerInfo.playerId + " has arrived!");
-  let playerSprite = PIXI.Sprite.from(frontLoader.resources.player.texture);
+  let idle = PIXI.Loader.shared.resources["walk"].spritesheet;
+  let anim_idle = new PIXI.AnimatedSprite(idle.animations["walk"]);
+  anim_idle.animationSpeed = 0.5;
+  anim_idle.play();
 
-  if (playerInfo.team === "blue") {
-    playerSprite.tint = 0x0000ff;
-  } else {
-    playerSprite.tint = 0xff0000;
-  }
+  playerSprite = new PIXI.Container();
+  playerSprite.scale.set(0.1);
+  playerSprite.addChild(anim_idle);
 
   player = viewport.addChild(playerSprite);
 
+  const style = new PIXI.TextStyle({ fontFamily: "Larceny" });
+  const playerName = new PIXI.Text(playerInfo.name, style);
+  playerName.resolution = 10;
+  playerName.anchor.set(0.5);
+  playerName.scale.set(0.5);
+
+  playernameObj = viewport.addChild(playerName);
   player.x = playerInfo.x;
   player.y = playerInfo.y;
   player.vx = 0;
@@ -173,15 +190,16 @@ function addPlayer(self, playerInfo) {
 }
 
 function addOtherPlayers(self, playerInfo) {
-  console.log("Player " + playerInfo.playerId + " has arrived!");
-  let playerSprite = PIXI.Sprite.from(frontLoader.resources.player.texture);
-  if (playerInfo.team === "blue") {
-    playerSprite.tint = 0x0000ff;
-  } else {
-    playerSprite.tint = 0xff0000;
-  }
+  let idle = PIXI.Loader.shared.resources["walk"].spritesheet;
+  let anim_idle = new PIXI.AnimatedSprite(idle.animations["walk"]);
+  anim_idle.animationSpeed = 0.5;
+  anim_idle.play();
 
-  const otherPlayer = self.otherPlayers.addChild(playerSprite);
+  otherPlayerSprite = new PIXI.Container();
+  otherPlayerSprite.scale.set(0.1);
+  otherPlayerSprite.addChild(anim_idle);
+
+  const otherPlayer = self.otherPlayers.addChild(otherPlayerSprite);
   otherPlayer.playerId = playerInfo.playerId;
   otherPlayer.x = playerInfo.x;
   otherPlayer.y = playerInfo.y;
@@ -199,12 +217,46 @@ function zoom() {
   let nscale = currentScale + scaleDelta;
 
   if (nscale < zoomFactor) {
-    player.pivot.x = 0;
-    player.pivot.y = 0;
+    //player.anchor.x = 0;
+    //player.anchor.y = 0;
     viewport.position.x += offsetX;
     viewport.position.y += offsetY;
     viewport.scale.set(nscale);
   }
+}
+
+function debugCollision() {
+  playerRectX = playerSprite.getBounds().x;
+  playerRectY = playerSprite.getBounds().y;
+  playerRectW = playerSprite.getBounds().width;
+  playerRectH = playerSprite.getBounds().height;
+  var debug = new PIXI.Graphics();
+  debug.name = `debug`;
+  debug.alpha = 0.1;
+  debug.beginFill(0xffff00);
+  debug.lineStyle(1, 0xff0000);
+  debug.drawRect(playerRectX, playerRectY, playerRectW, playerRectH);
+
+  const oldPRX = playerRectX;
+  const oldPRY = playerRectY;
+  const oldPRW = playerRectW;
+  const oldPRH = playerRectH;
+
+  if (
+    oldPRX != playerRectX ||
+    oldPRY != playerRectY ||
+    oldPRW != playerRectW ||
+    oldPRH != playerRectH
+  ) {
+    game.stage.addChild(debug);
+  } else {
+  }
+}
+function serverUpdate(delta) {
+  socket.on("gameUpdate", function (msg) {
+    console.log(msg);
+    location.reload();
+  });
 }
 
 /* scroll() {
