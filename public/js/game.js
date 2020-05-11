@@ -10,6 +10,8 @@ PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
 /*                                  DEFAULTS                                  */
 /* -------------------------------------------------------------------------- */
 
+const app = new PIXI.Application();
+var keys = {};
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
 
@@ -26,16 +28,27 @@ let renderer = new PIXI.Renderer({
   backgroundColor: 0xbbe773,
 });
 document.body.appendChild(renderer.view);
-let viewport = new PIXI.Container();
+let viewport = new Viewport.Viewport({
+  screenWidth: window.innerWidth,
+  screenHeight: window.innerHeight,
+  worldWidth: 1000,
+  worldHeight: 1000,
+
+  interaction: renderer.plugins.interaction, // the interaction module is important for wheel to work properly when renderer.v
+});
 
 //ANCHOR Ticker
 /* -------------------------------------------------------------------------- */
 /*                                   TICKER                                   */
 /* -------------------------------------------------------------------------- */
 
-let ticker = PIXI.Ticker.shared;
-ticker.add(function (delta) {
-  renderer.render(viewport);
+var ticker = new Smoothie({
+  engine: PIXI,
+  renderer: renderer,
+  root: viewport,
+  fps: 60,
+  update: update.bind(this),
+  interpolate: true,
 });
 
 //ANCHOR Network Variables
@@ -43,7 +56,7 @@ ticker.add(function (delta) {
 /*                               NETWORK OBJECTS                              */
 /* -------------------------------------------------------------------------- */
 
-let player, otherPlayer, socket;
+var player, otherPlayer, socket;
 
 //ANCHOR Player Settings
 /* -------------------------------------------------------------------------- */
@@ -70,8 +83,7 @@ let anim;
 /* -------------------------------------------------------------------------- */
 
 PIXI.Loader.shared
-  .add("idle", "../../assets/images/anims/idle.json")
-  .add("walk", "../../assets/images/anims/walk.json")
+  .add("austin", "../../assets/images/austin.json")
   .add("LarcenyFont", "../../assets/fonts/Larceny/Larceny.xml.fnt")
   .load(initialize);
 
@@ -81,8 +93,6 @@ PIXI.Loader.shared
 /* -------------------------------------------------------------------------- */
 
 function initialize() {
-  var keys = {};
-
   //ANCHOR Add players to Socket
   /* -------------------------------------------------------------------------- */
   /*                            ADD PLAYERS TO SERVER                           */
@@ -122,81 +132,14 @@ function initialize() {
     });
   });
 
-  //ANCHOR Input Function
-  /* -------------------------------------------------------------------------- */
-  /*                            DECLARE INPUT EVENTS                            */
-  /* -------------------------------------------------------------------------- */
-
-  function input() {
-    window.addEventListener("keydown", keysDown);
-    window.addEventListener("keyup", keysUp);
-
-    ticker.add(update);
-  }
-
-  function keysDown(e) {
-    console.log(e.keyCode);
-    keys[e.keyCode] = true;
-  }
-
-  function keysUp(e) {
-    keys[e.keyCode] = false;
-  }
-
-  //ANCHOR Update (Tick)
-  /* -------------------------------------------------------------------------- */
-  /*                                UPDATE (TICK)                               */
-  /* -------------------------------------------------------------------------- */
-
-  function update(delta) {
-    player.vx = playerSettings.speed;
-    player.vy = playerSettings.speed;
-
-    if (keys["87"]) {
-      player.y -= player.vy;
-    }
-    if (keys["83"]) {
-      player.y += player.vy;
-    }
-    if (keys["65"]) {
-      player.x -= player.vx;
-    }
-    if (keys["68"]) {
-      player.x += player.vx;
-    }
-
-    var x = player.x;
-    var y = player.y;
-    var r = player.rotation;
-
-    if (
-      player.oldPosition &&
-      (x !== player.oldPosition.x ||
-        y !== player.oldPosition.y ||
-        r !== player.oldPosition.rotation)
-    ) {
-      socket.emit("playerMovement", {
-        x: player.x,
-        y: player.y,
-        rotation: player.rotation,
-      });
-    }
-    player.oldPosition = {
-      x: player.x,
-      y: player.y,
-      rotation: player.rotation,
-    };
-    zoom();
-  }
-
   //ANCHOR Add Players
   /* -------------------------------------------------------------------------- */
   /*                           ADD PLAYER TO VIEWPORT                           */
   /* -------------------------------------------------------------------------- */
 
   function addPlayer(self, playerInfo) {
-    let idle = PIXI.Loader.shared.resources["walk"].spritesheet;
-    let anim_idle = new PIXI.AnimatedSprite(idle.animations["walk"]);
+    let idle = PIXI.Loader.shared.resources["austin"].spritesheet;
+    let anim_idle = new PIXI.AnimatedSprite(idle.animations["idle"]);
     anim_idle.animationSpeed = 0.75;
     anim_idle.play();
 
@@ -206,16 +149,18 @@ function initialize() {
 
     player = viewport.addChild(playerSprite);
 
+    /*
     const playerName = new PIXI.BitmapText(playerInfo.name, {
       font: "100px Larceny",
       align: "center",
     });
+    */
 
-    player.addChild(playerName);
+    //player.addChild(playerName);
     player.x = playerInfo.x;
     player.y = playerInfo.y;
-    player.vx = 0;
-    player.vy = 0;
+    player.vx = playerSettings.speed;
+    player.vy = playerSettings.speed;
     player.pivot.x = 185 / 2;
     player.pivot.y = 105 / 2;
 
@@ -228,9 +173,9 @@ function initialize() {
   /* -------------------------------------------------------------------------- */
 
   function addOtherPlayers(self, playerInfo) {
-    let idle = PIXI.Loader.shared.resources["walk"].spritesheet;
-    let anim_idle = new PIXI.AnimatedSprite(idle.animations["walk"]);
-    anim_idle.animationSpeed = 0.5;
+    let idle = PIXI.Loader.shared.resources["austin"].spritesheet;
+    let anim_idle = new PIXI.AnimatedSprite(idle.animations["idle"]);
+    anim_idle.animationSpeed = 0.75;
     anim_idle.play();
 
     otherPlayerSprite = new PIXI.Container();
@@ -244,73 +189,94 @@ function initialize() {
 
     viewport.addChild(otherPlayer);
   }
+}
 
-  function zoom() {
-    const scaleDelta = 0.01;
+//ANCHOR Input Function
+/* -------------------------------------------------------------------------- */
+/*                            DECLARE INPUT EVENTS                            */
+/* -------------------------------------------------------------------------- */
 
-    offsetX = -(player.x * scaleDelta);
-    offsetY = -(player.y * scaleDelta);
+function input() {
+  window.addEventListener("keydown", keysDown);
+  window.addEventListener("keyup", keysUp);
+}
 
-    const currentScale = viewport.scale.x;
-    let nscale = currentScale + scaleDelta;
+function keysDown(e) {
+  keys[e.keyCode] = true;
+}
 
-    if (nscale < playerSettings.zoom) {
-      playerSprite.pivot.x = 0;
-      playerSprite.pivot.y = 0;
-      viewport.position.x += offsetX;
-      viewport.position.y += offsetY;
-      viewport.scale.set(nscale);
-    }
+function keysUp(e) {
+  keys[e.keyCode] = false;
+}
+
+//ANCHOR Update (Tick)
+/* -------------------------------------------------------------------------- */
+/*                                UPDATE (TICK)                               */
+/* -------------------------------------------------------------------------- */
+
+function update(delta) {
+  //player.vx = playerSettings.speed;
+  //player.vy = playerSettings.speed;
+
+  if (keys["87"]) {
+    player.y -= player.vy;
+  }
+  if (keys["83"]) {
+    player.y += player.vy;
+  }
+  if (keys["65"]) {
+    player.x -= player.vx;
+  }
+  if (keys["68"]) {
+    player.x += player.vx;
+  }
+
+  var x = player.x;
+  var y = player.y;
+  var r = player.rotation;
+
+  if (
+    player.oldPosition &&
+    (x !== player.oldPosition.x ||
+      y !== player.oldPosition.y ||
+      r !== player.oldPosition.rotation)
+  ) {
+    socket.emit("playerMovement", {
+      x: player.x,
+      y: player.y,
+      rotation: player.rotation,
+    });
+  }
+  player.oldPosition = {
+    x: player.x,
+    y: player.y,
+    rotation: player.rotation,
+  };
+  //zoom();
+  camera();
+}
+
+function zoom() {
+  const scaleDelta = 0.01;
+
+  offsetX = -(player.x * scaleDelta);
+  offsetY = -(player.y * scaleDelta);
+
+  const currentScale = viewport.scale.x;
+  let nscale = currentScale + scaleDelta;
+
+  if (nscale < playerSettings.zoom) {
+    playerSprite.pivot.x = 0;
+    playerSprite.pivot.y = 0;
+    viewport.position.x += offsetX;
+    viewport.position.y += offsetY;
+    viewport.scale.set(nscale);
   }
 }
-/*
-  function debugCollision() {
-    playerRectX = playerSprite.getBounds().x;
-    playerRectY = playerSprite.getBounds().y;
-    playerRectW = playerSprite.getBounds().width;
-    playerRectH = playerSprite.getBounds().height;
-    var debug = new PIXI.Graphics();
-    debug.name = `debug`;
-    debug.alpha = 0.01;
-    debug.beginFill(0xffff00);
-    debug.lineStyle(1, 0xff0000);
-    debug.drawRect(playerRectX, playerRectY, playerRectW, playerRectH);
-    game.stage.addChild(debug);
-  }
+
+function camera() {
+  viewport.follow(player);
+  viewport.setZoom(1.5);
 }
 
-function serverUpdate(delta) {
-  socket.on("gameUpdate", function (msg) {
-    console.log(msg);
-    location.reload();
-  });
-}
-
-scroll() {
-  const scrollDelta = 0.01;
-
-  const offsetX = -(viewport.x * scrollDelta);
-  const offsetY = -(viewport.y * scrollDelta);
-
-  switch (direction) {
-    default:
-      break;
-    case 0: //(No Direction)
-      viewport.position.x;
-      viewport.position.y;
-      break;
-    case 1: //Up
-      viewport.position.y -= offsetY;
-      break;
-    case 2:
-      viewport.position.x -= offsetX;
-      break;
-    case 3:
-      viewport.position.y += offsetY;
-      break;
-    case 4:
-      viewport.position.x += offsetX;
-      break;
-  }
-}
-*/
+ticker.start();
