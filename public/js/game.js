@@ -27,6 +27,7 @@ let renderer = new PIXI.Renderer({
   resolution: window.devicePixelRatio,
   backgroundColor: 0xbbe773,
 });
+renderer.resize(WIDTH, HEIGHT);
 document.body.appendChild(renderer.view);
 let viewport = new Viewport.Viewport({
   screenWidth: window.innerWidth,
@@ -37,26 +38,16 @@ let viewport = new Viewport.Viewport({
   interaction: renderer.plugins.interaction, // the interaction module is important for wheel to work properly when renderer.v
 });
 
-//ANCHOR Ticker
-/* -------------------------------------------------------------------------- */
-/*                                   TICKER                                   */
-/* -------------------------------------------------------------------------- */
-
-var ticker = new Smoothie({
-  engine: PIXI,
-  renderer: renderer,
-  root: viewport,
-  fps: 60,
-  update: update.bind(this),
-  interpolate: true,
-});
+b = new Bump(PIXI);
 
 //ANCHOR Network Variables
 /* -------------------------------------------------------------------------- */
 /*                               NETWORK OBJECTS                              */
 /* -------------------------------------------------------------------------- */
 
-var player, otherPlayer, socket;
+let player = new PIXI.Container(),
+  otherPlayer,
+  socket;
 
 //ANCHOR Player Settings
 /* -------------------------------------------------------------------------- */
@@ -93,6 +84,20 @@ PIXI.Loader.shared
 /* -------------------------------------------------------------------------- */
 
 function initialize() {
+  //ANCHOR Ticker
+  /* -------------------------------------------------------------------------- */
+  /*                                   TICKER                                   */
+  /* -------------------------------------------------------------------------- */
+
+  var ticker = new Smoothie({
+    engine: PIXI,
+    renderer: renderer,
+    root: viewport,
+    fps: 60,
+    update: update.bind(this),
+    interpolate: true,
+  });
+
   //ANCHOR Add players to Socket
   /* -------------------------------------------------------------------------- */
   /*                            ADD PLAYERS TO SERVER                           */
@@ -139,15 +144,13 @@ function initialize() {
 
   function addPlayer(self, playerInfo) {
     let idle = PIXI.Loader.shared.resources["austin"].spritesheet;
-    let anim_idle = new PIXI.AnimatedSprite(idle.animations["idle"]);
-    anim_idle.animationSpeed = 0.75;
-    anim_idle.play();
+    let playerSprite = new PIXI.AnimatedSprite(idle.animations["idle"]);
 
-    playerSprite = new PIXI.Container();
+    playerSprite.animationSpeed = 0.75;
     playerSprite.scale.set(0.1);
-    playerSprite.addChild(anim_idle);
+    playerSprite.play();
 
-    player = viewport.addChild(playerSprite);
+    player.addChild(playerSprite);
 
     /*
     const playerName = new PIXI.BitmapText(playerInfo.name, {
@@ -161,9 +164,10 @@ function initialize() {
     player.y = playerInfo.y;
     player.vx = playerSettings.speed;
     player.vy = playerSettings.speed;
-    player.pivot.x = 185 / 2;
-    player.pivot.y = 105 / 2;
+    //player.pivot.x = 185 / 2;
+    //player.pivot.y = 105 / 2;
 
+    viewport.addChild(player);
     input();
   }
 
@@ -174,13 +178,11 @@ function initialize() {
 
   function addOtherPlayers(self, playerInfo) {
     let idle = PIXI.Loader.shared.resources["austin"].spritesheet;
-    let anim_idle = new PIXI.AnimatedSprite(idle.animations["idle"]);
-    anim_idle.animationSpeed = 0.75;
-    anim_idle.play();
+    let otherPlayerSprite = new PIXI.AnimatedSprite(idle.animations["idle"]);
 
-    otherPlayerSprite = new PIXI.Container();
+    otherPlayerSprite.animationSpeed = 0.75;
     otherPlayerSprite.scale.set(0.1);
-    otherPlayerSprite.addChild(anim_idle);
+    otherPlayerSprite.play();
 
     const otherPlayer = self.otherPlayers.addChild(otherPlayerSprite);
     otherPlayer.playerId = playerInfo.playerId;
@@ -189,94 +191,97 @@ function initialize() {
 
     viewport.addChild(otherPlayer);
   }
-}
+  //ANCHOR Input Function
+  /* -------------------------------------------------------------------------- */
+  /*                            DECLARE INPUT EVENTS                            */
+  /* -------------------------------------------------------------------------- */
 
-//ANCHOR Input Function
-/* -------------------------------------------------------------------------- */
-/*                            DECLARE INPUT EVENTS                            */
-/* -------------------------------------------------------------------------- */
+  function input() {
+    window.addEventListener("keydown", keysDown);
+    window.addEventListener("keyup", keysUp);
 
-function input() {
-  window.addEventListener("keydown", keysDown);
-  window.addEventListener("keyup", keysUp);
-}
-
-function keysDown(e) {
-  keys[e.keyCode] = true;
-}
-
-function keysUp(e) {
-  keys[e.keyCode] = false;
-}
-
-//ANCHOR Update (Tick)
-/* -------------------------------------------------------------------------- */
-/*                                UPDATE (TICK)                               */
-/* -------------------------------------------------------------------------- */
-
-function update(delta) {
-  //player.vx = playerSettings.speed;
-  //player.vy = playerSettings.speed;
-
-  if (keys["87"]) {
-    player.y -= player.vy;
-  }
-  if (keys["83"]) {
-    player.y += player.vy;
-  }
-  if (keys["65"]) {
-    player.x -= player.vx;
-  }
-  if (keys["68"]) {
-    player.x += player.vx;
+    ticker.update = update.bind(this);
   }
 
-  var x = player.x;
-  var y = player.y;
-  var r = player.rotation;
+  function keysDown(e) {
+    keys[e.keyCode] = true;
+  }
 
-  if (
-    player.oldPosition &&
-    (x !== player.oldPosition.x ||
-      y !== player.oldPosition.y ||
-      r !== player.oldPosition.rotation)
-  ) {
-    socket.emit("playerMovement", {
+  function keysUp(e) {
+    keys[e.keyCode] = false;
+  }
+
+  //ANCHOR Update (Tick)
+  /* -------------------------------------------------------------------------- */
+  /*                                UPDATE (TICK)                               */
+  /* -------------------------------------------------------------------------- */
+
+  function update(delta) {
+    player.vx = playerSettings.speed;
+    player.vy = playerSettings.speed;
+
+    if (keys["87"]) {
+      player.y -= player.vy;
+    }
+    if (keys["83"]) {
+      player.y += player.vy;
+    }
+    if (keys["65"]) {
+      player.x -= player.vx;
+    }
+    if (keys["68"]) {
+      player.x += player.vx;
+    }
+
+    var x = player.x;
+    var y = player.y;
+    var r = player.rotation;
+
+    if (
+      player.oldPosition &&
+      (x !== player.oldPosition.x ||
+        y !== player.oldPosition.y ||
+        r !== player.oldPosition.rotation)
+    ) {
+      socket.emit("playerMovement", {
+        x: player.x,
+        y: player.y,
+        rotation: player.rotation,
+      });
+    }
+    player.oldPosition = {
       x: player.x,
       y: player.y,
       rotation: player.rotation,
-    });
+    };
+    //zoom();
+    camera();
+    renderer.render(viewport);
+    //b.hitTestRectangle(player, otherPlayer, true, true, true);
   }
-  player.oldPosition = {
-    x: player.x,
-    y: player.y,
-    rotation: player.rotation,
-  };
-  //zoom();
-  camera();
-}
 
-function zoom() {
-  const scaleDelta = 0.01;
+  function zoom() {
+    const scaleDelta = 0.01;
 
-  offsetX = -(player.x * scaleDelta);
-  offsetY = -(player.y * scaleDelta);
+    offsetX = -(player.x * scaleDelta);
+    offsetY = -(player.y * scaleDelta);
 
-  const currentScale = viewport.scale.x;
-  let nscale = currentScale + scaleDelta;
+    const currentScale = viewport.scale.x;
+    let nscale = currentScale + scaleDelta;
 
-  if (nscale < playerSettings.zoom) {
-    playerSprite.pivot.x = 0;
-    playerSprite.pivot.y = 0;
-    viewport.position.x += offsetX;
-    viewport.position.y += offsetY;
-    viewport.scale.set(nscale);
+    if (nscale < playerSettings.zoom) {
+      playerSprite.pivot.x = 0;
+      playerSprite.pivot.y = 0;
+      viewport.position.x += offsetX;
+      viewport.position.y += offsetY;
+      viewport.scale.set(nscale);
+    }
   }
-}
 
-function camera() {
-  viewport.follow(player);
-  viewport.setZoom(1.5);
-}
+  function camera() {
+    viewport.follow(player);
+    viewport.setZoom(1.5);
+  }
 
-ticker.start();
+  ticker.start();
+}
