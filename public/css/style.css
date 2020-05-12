@@ -2,6 +2,7 @@ body {
   margin: 0;
   padding: 0;
   overflow: hidden;
+  background-color: #bbe773;
 }
 
 canvas {
@@ -13,4 +14,117 @@ canvas {
 @font-face {
   font-family: Larceny;
   src: local("Larceny"), url(../assets/fonts/Larceny.ttf);
+}
+
+@font-face {
+  font-family: Thirtysix;
+  src: local("Thirtysix"), url(../assets/fonts/Thirtysix.ttf);
+}
+
+@font-face {
+  font-family: Tricks-Italic;
+  src: local("Tricks-Italic"), url(../assets/fonts/Tricks-Italic.ttf);
+}
+
+@font-face {
+  font-family: TricksHollow-Italic;
+  src: local("TricksHollow-Italic"),
+    url(../assets/fonts/TricksHollow-Italic.ttf);
+}
+
+h1 {
+  font-family: "Thirtysix", sans-serif;
+  color: white;
+  font-size: 20px;
+}
+
+.title {
+  display: block;
+  content: "";
+  font-size: 48pt;
+  font-family: TricksHollow-Italic;
+  z-index: 0;
+  position: absolute;
+  top: 20%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+.form {
+  content: "";
+  z-index: 0;
+  padding: 20px 40px;
+  box-sizing: border-box;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  background: #25c3ff;
+  border: 5px solid black;
+  box-shadow: 10px 10px #0000005b;
+  width: 420px;
+  height: 420px;
+}
+
+.form::after {
+  content: "";
+  z-index: 1;
+  padding: 20px 40px;
+  box-sizing: border-box;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  background: #ff9429;
+  border-right: 5px solid black;
+  border-left: 5px solid black;
+  width: 420px;
+  height: 210px;
+}
+
+input {
+  font-family: "BluebirdRegular", sans-serif;
+  font-size: 16pt;
+  color: white;
+  line-height: 1.3em;
+  height: 1.6em;
+  margin: 0;
+  padding: 0;
+  width: 60%;
+  background: none;
+  -webkit-transition: all 0.3s;
+  transition: all 0.3s;
+  border: none;
+  outline: none;
+  border-bottom: 3px solid black;
+  box-sizing: border-box;
+}
+input:focus {
+  border-bottom: 3px solid #86ffe7;
+}
+input::-webkit-input-placeholder {
+  opacity: 0.4;
+  color: white;
+}
+input::-moz-placeholder {
+  opacity: 0.4;
+  color: white;
+}
+input:-ms-input-placeholder {
+  opacity: 0.4;
+  color: white;
+}
+input::-ms-input-placeholder {
+  opacity: 0.4;
+  color: white;
+}
+input::placeholder {
+  opacity: 0.4;
+  color: white;
+}
+
+.play-btn {
 }

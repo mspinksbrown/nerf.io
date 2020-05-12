@@ -1,9 +1,10 @@
-//ANCHOR Pixi Settings
+//ANCHOR PIXI Settings
 /* -------------------------------------------------------------------------- */
 /*                            GLOBAL PIXI SETTINGS                            */
 /* -------------------------------------------------------------------------- */
 
 PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
+PIXI.utils.skipHello();
 
 //ANCHOR Game Defaults
 /* -------------------------------------------------------------------------- */
@@ -14,8 +15,9 @@ const app = new PIXI.Application();
 var keys = {};
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
+const primitives = new PIXI.Graphics();
 
-//ANCHOR Renderer Settings
+//ANCHOR Define Renderer Settings
 /* -------------------------------------------------------------------------- */
 /*                                  RENDERER                                  */
 /* -------------------------------------------------------------------------- */
@@ -24,29 +26,47 @@ let renderer = new PIXI.Renderer({
   width: WIDTH,
   height: HEIGHT,
   autoResize: true,
-  resolution: window.devicePixelRatio,
+  //resolution: window.devicePixelRatio,
   backgroundColor: 0xbbe773,
 });
 renderer.resize(WIDTH, HEIGHT);
 document.body.appendChild(renderer.view);
+
+//ANCHOR Define Viewport Settings
+/* -------------------------------------------------------------------------- */
+/*                                  VIEWPORT                                  */
+/* -------------------------------------------------------------------------- */
+
 let viewport = new Viewport.Viewport({
   screenWidth: window.innerWidth,
   screenHeight: window.innerHeight,
-  worldWidth: 1000,
-  worldHeight: 1000,
 
   interaction: renderer.plugins.interaction, // the interaction module is important for wheel to work properly when renderer.v
 });
 
-b = new Bump(PIXI);
+let b = new Bump(PIXI);
 
-//ANCHOR Network Variables
+//ANCHOR Add Ticker
+/* -------------------------------------------------------------------------- */
+/*                                   TICKER                                   */
+/* -------------------------------------------------------------------------- */
+
+var ticker = new Smoothie({
+  engine: PIXI,
+  renderer: renderer,
+  root: viewport,
+  fps: 60,
+  update: update.bind(this),
+  interpolate: true,
+});
+
+//ANCHOR Declare Network Variables
 /* -------------------------------------------------------------------------- */
 /*                               NETWORK OBJECTS                              */
 /* -------------------------------------------------------------------------- */
 
 let player = new PIXI.Container(),
-  otherPlayer,
+  otherPlayer = new PIXI.Container(),
   socket;
 
 //ANCHOR Player Settings
@@ -58,6 +78,7 @@ var playerSettings = {
   speed: 2,
   zoom: 2,
   direction: 0,
+  rootNode: new PIXI.Point(),
 };
 
 let menu = new PIXI.Container();
@@ -75,30 +96,38 @@ let anim;
 
 PIXI.Loader.shared
   .add("austin", "../../assets/images/austin.json")
+  .add("cubby2", "../../assets/images/map/objects/cubbies_tier2.png")
   .add("LarcenyFont", "../../assets/fonts/Larceny/Larceny.xml.fnt")
-  .load(initialize);
+  .load(generateMap);
 
-//ANCHOR Initialize
+//ANCHOR Map Generation
 /* -------------------------------------------------------------------------- */
-/*                           INITIALIZE APPLICATION                           */
+/*                               MAP GENERATION                               */
+/* -------------------------------------------------------------------------- */
+
+function generateMap() {
+  var mapSettings = {
+    mapWidth: 1000,
+    mapHeight: 1000,
+  };
+
+  viewport.worldWidth = mapSettings.mapWidth;
+  viewport.worldHeight = mapSettings.mapHeight;
+
+  //Spawn Roads
+  var createRoads = function () {};
+
+  //After map is fully generated:
+  initialize();
+}
+
+//ANCHOR Initialize Player
+/* -------------------------------------------------------------------------- */
+/*                              INITIALIZE PLAYER                             */
 /* -------------------------------------------------------------------------- */
 
 function initialize() {
-  //ANCHOR Ticker
-  /* -------------------------------------------------------------------------- */
-  /*                                   TICKER                                   */
-  /* -------------------------------------------------------------------------- */
-
-  var ticker = new Smoothie({
-    engine: PIXI,
-    renderer: renderer,
-    root: viewport,
-    fps: 60,
-    update: update.bind(this),
-    interpolate: true,
-  });
-
-  //ANCHOR Add players to Socket
+  //ANCHOR Get Player Data from Server
   /* -------------------------------------------------------------------------- */
   /*                            ADD PLAYERS TO SERVER                           */
   /* -------------------------------------------------------------------------- */
@@ -137,7 +166,7 @@ function initialize() {
     });
   });
 
-  //ANCHOR Add Players
+  //ANCHOR Add Player (User)
   /* -------------------------------------------------------------------------- */
   /*                           ADD PLAYER TO VIEWPORT                           */
   /* -------------------------------------------------------------------------- */
@@ -146,7 +175,8 @@ function initialize() {
     let idle = PIXI.Loader.shared.resources["austin"].spritesheet;
     let playerSprite = new PIXI.AnimatedSprite(idle.animations["idle"]);
 
-    playerSprite.animationSpeed = 0.75;
+    playerSprite.resolution = 6;
+    playerSprite.animationSpeed = 0.5;
     playerSprite.scale.set(0.1);
     playerSprite.play();
 
@@ -167,6 +197,9 @@ function initialize() {
     //player.pivot.x = 185 / 2;
     //player.pivot.y = 105 / 2;
 
+    playerSettings.rootNode = (player.width / 2, player.height / 2);
+
+    viewport.addChild(primitives);
     viewport.addChild(player);
     input();
   }
@@ -180,17 +213,18 @@ function initialize() {
     let idle = PIXI.Loader.shared.resources["austin"].spritesheet;
     let otherPlayerSprite = new PIXI.AnimatedSprite(idle.animations["idle"]);
 
-    otherPlayerSprite.animationSpeed = 0.75;
+    otherPlayerSprite.animationSpeed = 0.5;
     otherPlayerSprite.scale.set(0.1);
     otherPlayerSprite.play();
 
-    const otherPlayer = self.otherPlayers.addChild(otherPlayerSprite);
+    otherPlayer = self.otherPlayers.addChild(otherPlayerSprite);
     otherPlayer.playerId = playerInfo.playerId;
     otherPlayer.x = playerInfo.x;
     otherPlayer.y = playerInfo.y;
 
     viewport.addChild(otherPlayer);
   }
+
   //ANCHOR Input Function
   /* -------------------------------------------------------------------------- */
   /*                            DECLARE INPUT EVENTS                            */
@@ -210,78 +244,95 @@ function initialize() {
   function keysUp(e) {
     keys[e.keyCode] = false;
   }
+}
 
-  //ANCHOR Update (Tick)
-  /* -------------------------------------------------------------------------- */
-  /*                                UPDATE (TICK)                               */
-  /* -------------------------------------------------------------------------- */
+//ANCHOR Update (Tick)
+/* -------------------------------------------------------------------------- */
+/*                                UPDATE (TICK)                               */
+/* -------------------------------------------------------------------------- */
 
-  function update(delta) {
-    player.vx = playerSettings.speed;
-    player.vy = playerSettings.speed;
+function update(delta) {
+  player.vx = playerSettings.speed;
+  player.vy = playerSettings.speed;
 
-    if (keys["87"]) {
-      player.y -= player.vy;
-    }
-    if (keys["83"]) {
-      player.y += player.vy;
-    }
-    if (keys["65"]) {
-      player.x -= player.vx;
-    }
-    if (keys["68"]) {
-      player.x += player.vx;
-    }
+  if (keys["87"]) {
+    player.y -= playerSettings.speed;
+  }
+  if (keys["83"]) {
+    player.y += playerSettings.speed;
+  }
+  if (keys["65"]) {
+    player.x -= playerSettings.speed;
+  }
+  if (keys["68"]) {
+    player.x += playerSettings.speed;
+  }
 
-    var x = player.x;
-    var y = player.y;
-    var r = player.rotation;
+  var x = player.x;
+  var y = player.y;
+  var r = player.rotation;
 
-    if (
-      player.oldPosition &&
-      (x !== player.oldPosition.x ||
-        y !== player.oldPosition.y ||
-        r !== player.oldPosition.rotation)
-    ) {
-      socket.emit("playerMovement", {
-        x: player.x,
-        y: player.y,
-        rotation: player.rotation,
-      });
-    }
-    player.oldPosition = {
+  if (
+    player.oldPosition &&
+    (x !== player.oldPosition.x ||
+      y !== player.oldPosition.y ||
+      r !== player.oldPosition.rotation)
+  ) {
+    socket.emit("playerMovement", {
       x: player.x,
       y: player.y,
       rotation: player.rotation,
-    };
-    //zoom();
-    camera();
-    renderer.render(viewport);
-    //b.hitTestRectangle(player, otherPlayer, true, true, true);
+    });
   }
+  player.oldPosition = {
+    x: player.x,
+    y: player.y,
+    rotation: player.rotation,
+  };
+  //zoom();
+  camera();
+  collisionDetection();
+  drawRootNode();
+  renderer.render(viewport);
+}
 
-  function zoom() {
-    const scaleDelta = 0.01;
+function zoom() {
+  const scaleDelta = 0.01;
 
-    offsetX = -(player.x * scaleDelta);
-    offsetY = -(player.y * scaleDelta);
+  offsetX = -(player.x * scaleDelta);
+  offsetY = -(player.y * scaleDelta);
 
-    const currentScale = viewport.scale.x;
-    let nscale = currentScale + scaleDelta;
+  const currentScale = viewport.scale.x;
+  let nscale = currentScale + scaleDelta;
 
-    if (nscale < playerSettings.zoom) {
-      playerSprite.pivot.x = 0;
-      playerSprite.pivot.y = 0;
-      viewport.position.x += offsetX;
-      viewport.position.y += offsetY;
-      viewport.scale.set(nscale);
-    }
+  if (nscale < playerSettings.zoom) {
+    playerSprite.pivot.x = 0;
+    playerSprite.pivot.y = 0;
+    viewport.position.x += offsetX;
+    viewport.position.y += offsetY;
+    viewport.scale.set(nscale);
   }
+}
 
-  function camera() {
-    viewport.follow(player);
-    viewport.setZoom(1.5);
-  }
+function camera() {
+  viewport.follow(player);
+  viewport.setZoom(2);
+}
 
-  ticker.start();
+function spawnFurniture() {
+  let cubby = new PIXI.Sprite.from(PIXI.Loader.shared.resources["cubby2"].url);
+  cubby.x = Math.floor(Math.random() * 700) + 50;
+  cubby.y = Math.floor(Math.random() * 500) + 50;
+  viewport.addChild(cubby);
+}
+
+ticker.start();
+spawnFurniture();
+
+function collisionDetection() {
+  b.hit(player, otherPlayer, true, true);
+}
+
+function drawRootNode() {
+  primitives.drawCircle(playerSettings.rootNode, 2);
 }
