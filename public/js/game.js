@@ -16,6 +16,7 @@ var keys = {};
 const WIDTH = window.innerWidth;
 const HEIGHT = window.innerHeight;
 const primitives = new PIXI.Graphics();
+var userSocket;
 
 //ANCHOR Define Renderer Settings
 /* -------------------------------------------------------------------------- */
@@ -131,16 +132,24 @@ function initialize() {
   /* -------------------------------------------------------------------------- */
   /*                            ADD PLAYERS TO SERVER                           */
   /* -------------------------------------------------------------------------- */
-
   var self = this;
   this.socket = io();
   socket = this.socket;
+
+  let userData = {
+    name: localStorage.getItem("Username"),
+  };
+  socket.emit("playerData", {
+    name: userData.name,
+  });
+
   this.otherPlayers = new PIXI.Container();
   viewport.addChild(self.otherPlayers);
   this.socket.on("currentPlayers", function (players) {
     Object.keys(players).forEach(function (id) {
       if (players[id].playerId === self.socket.id) {
-        addPlayer(self, players[id]);
+        setTimeout(addPlayer(self, players[id]), 1000);
+        console.log(userData);
       } else {
         addOtherPlayers(self, players[id]);
       }

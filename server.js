@@ -7,33 +7,38 @@ var io = require("socket.io").listen(server);
 
 //Array that stores all of the players connected.
 var players = {};
+var playerData = {};
 
 app.use(express.static(__dirname + "/public"));
 
 app.get("/", function (req, res) {
-  res.sendFile(__dirname + "/index.html");
+  res.sendFile(path.join(__dirname + "index.html"));
 });
 
 //When a connection with the server is establsihed
 io.on("connection", function (socket) {
   // create a new player and add it to our players object
   players[socket.id] = {
-    name: "PLAYER",
+    name: "",
     rotation: 0,
     x: Math.floor(Math.random() * 700) + 50,
     y: Math.floor(Math.random() * 500) + 50,
     playerId: socket.id,
   };
-  console.log(
-    "Player: " +
-      '"' +
-      players[socket.id].name +
-      '" ' +
-      "(ID: " +
-      players[socket.id].playerId +
-      ")" +
-      " has joined!"
-  );
+
+  socket.on("playerData", function (userData) {
+    players[socket.id].name = userData.name;
+    console.log(
+      "Player: " +
+        '"' +
+        players[socket.id].name +
+        '" ' +
+        "(ID: " +
+        players[socket.id].playerId +
+        ")" +
+        " has joined!"
+    );
+  });
   // send the players object to the new player
   socket.emit("currentPlayers", players);
   // update all other players of the new player

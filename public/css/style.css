@@ -39,16 +39,40 @@ h1 {
 }
 
 .title {
+  color: rgb(0, 0, 0);
   display: block;
-  content: "";
+  content: "NERF.IO";
   font-size: 48pt;
   font-family: TricksHollow-Italic;
-  z-index: 0;
+  z-index: 1;
   position: absolute;
   top: 20%;
   left: 50%;
   -webkit-transform: translate(-50%, -50%);
   transform: translate(-50%, -50%);
+}
+
+.title::after {
+  font-size: 48pt;
+  z-index: -1;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  content: "NERF.IO";
+  font-family: Tricks-Italic;
+  display: block;
+
+  background: url("../assets/images/pattern.png");
+  -webkit-background-clip: text;
+  background-clip: text;
+
+  -webkit-text-fill-color: transparent;
+  -webkit-animation: aitf 1s linear reverse infinite;
+  animation: aitf 1s linear reverse infinite;
+
+  -webkit-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+  backface-visibility: hidden;
 }
 
 .form {
@@ -127,4 +151,36 @@ input::placeholder {
 }
 
 .play-btn {
+}
+
+@keyframes tilt {
+  25% {
+    transform: rotate(-15deg);
+  }
+  50% {
+    transform: rotate(15deg);
+  }
+  75% {
+    transform: rotate(-15deg);
+  }
+  100% {
+    transform: rotate(15deg);
+  }
+}
+@keyframes aitf {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+@-webkit-keyframes aitf {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
 }

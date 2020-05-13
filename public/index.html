@@ -3,24 +3,49 @@
   <head>
     <meta charset="utf-8" />
     <link rel="stylesheet" type="text/css" href="css/style.css" />
+    <title>nerf.io</title>
   </head>
 
-  <body>
-    <div class="title">NERF.IO</div>
+  <body onload="refresh()">
+    <div class="wrapper" id="menu-wrapper">
+    <div class="title"><span>NERF.IO</span></div>
     <div class="form">
       <div class="input=box">
-        <input type="text" id="playernameinput" placeholder="Enter a name..." onfocusout="" /></input>
-        <button class ="play-btn" type="button">PLAY</button>
+        <input type="text" id="playernameinput" placeholder="Enter a name..." maxlength="13" autocomplete="off" onfocusout="storeUserData()" /></input>
+        <button class ="play-btn" type="button" onmouseup="play()">PLAY</button>
         <button class ="play-btn" type="button">PLAY BFFs</button>
         <button class ="play-btn" type="button">PLAY Buddies</button>
       </div>
   </div>
     <script>
-      function processInput() {
+      var userData = {
+          username: "Player",
+        };
+      
+      function refresh() {
+        currentName = localStorage.getItem("Username");
+        document.getElementById("playernameinput").value = currentName;
+      }
+      function storeUserData() {
+        userData.username = document.getElementById("playernameinput").value;
+        if (userData.username == null) {
+        localStorage.setItem("Username", "Player");
+      } else {
+        localStorage.setItem("Username", userData.username);
+      }
+
+        console.log(localStorage.getItem("username"));
+
+      }
+
+      function play() {
+
+        let wrapper = document.getElementById("menu-wrapper");
         let script = document.createElement("script");
         script.src = "js/game.js";
 
-        document.head.appendChild(script);
+        document.body.appendChild(script);
+        document.body.removeChild(wrapper);
       }
     </script>
 
@@ -30,5 +55,6 @@
     <script src="assets/lib/viewport.js"></script>
     <script src="assets/lib/smoothie.js"></script>
     <script src="assets/lib/bump.js"></script>
+    <!--<script src="assets/lib/spriter.js "></script>-->
   </body>
 </html>
