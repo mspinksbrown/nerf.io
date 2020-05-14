@@ -1,155 +1,115 @@
-//ANCHOR PIXI Settings
-/* -------------------------------------------------------------------------- */
-/*                            GLOBAL PIXI SETTINGS                            */
-/* -------------------------------------------------------------------------- */
+const WIDTH = window.innerWidth * window.devicePixelRatio;
+const HEIGHT = window.innerHeight * window.devicePixelRatio;
 
-PIXI.settings.SCALE_MODE = PIXI.SCALE_MODES.NEAREST;
-PIXI.utils.skipHello();
-
-//ANCHOR Game Defaults
-/* -------------------------------------------------------------------------- */
-/*                                  DEFAULTS                                  */
-/* -------------------------------------------------------------------------- */
-
-const app = new PIXI.Application();
-var keys = {};
-const WIDTH = window.innerWidth;
-const HEIGHT = window.innerHeight;
-const primitives = new PIXI.Graphics();
-var userSocket;
-
-//ANCHOR Define Renderer Settings
-/* -------------------------------------------------------------------------- */
-/*                                  RENDERER                                  */
-/* -------------------------------------------------------------------------- */
-
-let renderer = new PIXI.Renderer({
+var game = new Phaser.Game({
+  type: Phaser.CANVAS,
+  parent: "phaser-example",
   width: WIDTH,
   height: HEIGHT,
-  autoResize: true,
-  //resolution: window.devicePixelRatio,
-  backgroundColor: 0xbbe773,
-});
-renderer.resize(WIDTH, HEIGHT);
-document.body.appendChild(renderer.view);
-
-//ANCHOR Define Viewport Settings
-/* -------------------------------------------------------------------------- */
-/*                                  VIEWPORT                                  */
-/* -------------------------------------------------------------------------- */
-
-let viewport = new Viewport.Viewport({
-  screenWidth: window.innerWidth,
-  screenHeight: window.innerHeight,
-
-  interaction: renderer.plugins.interaction, // the interaction module is important for wheel to work properly when renderer.v
+  physics: {
+    default: "arcade",
+    arcade: {
+      debug: false,
+      gravity: { y: 0 },
+    },
+  },
+  scene: {
+    preload: preload,
+    create: create,
+    update: update,
+  },
 });
 
-let b = new Bump(PIXI);
-
-//ANCHOR Add Ticker
-/* -------------------------------------------------------------------------- */
-/*                                   TICKER                                   */
-/* -------------------------------------------------------------------------- */
-
-var ticker = new Smoothie({
-  engine: PIXI,
-  renderer: renderer,
-  root: viewport,
-  fps: 60,
-  update: update.bind(this),
-  interpolate: true,
-});
-
-//ANCHOR Declare Network Variables
-/* -------------------------------------------------------------------------- */
-/*                               NETWORK OBJECTS                              */
-/* -------------------------------------------------------------------------- */
-
-let player = new PIXI.Container(),
-  otherPlayer = new PIXI.Container(),
-  socket;
-
-//ANCHOR Player Settings
-/* -------------------------------------------------------------------------- */
-/*                              PLAYER PARAMETERS                             */
-/* -------------------------------------------------------------------------- */
+var player;
+var playerCamera;
+var userData;
 
 var playerSettings = {
-  speed: 2,
-  zoom: 2,
-  direction: 0,
-  rootNode: new PIXI.Point(),
+  speed: 600,
 };
 
-let menu = new PIXI.Container();
+var scaleRatio = window.devicePixelRatio / 3;
 
-let currentAnimation = 0;
-let anim;
-//viewport.scale.set(2);
+var gameObjects = [];
 
-//game.stage.addChild(viewport);
+var animIndex = 0;
 
-//ANCHOR Preload
+//ANCHOR Preload Assets
 /* -------------------------------------------------------------------------- */
 /*                               PRELOAD ASSETS                               */
 /* -------------------------------------------------------------------------- */
 
-PIXI.Loader.shared
-  .add("austin", "../../assets/images/austin.json")
-  .add("cubby2", "../../assets/images/map/objects/cubbies_tier2.png")
-  .add("LarcenyFont", "../../assets/fonts/Larceny/Larceny.xml.fnt")
-  .load(generateMap);
-
-//ANCHOR Map Generation
-/* -------------------------------------------------------------------------- */
-/*                               MAP GENERATION                               */
-/* -------------------------------------------------------------------------- */
-
-function generateMap() {
-  var mapSettings = {
-    mapWidth: 1000,
-    mapHeight: 1000,
-  };
-
-  viewport.worldWidth = mapSettings.mapWidth;
-  viewport.worldHeight = mapSettings.mapHeight;
-
-  //Spawn Roads
-  var createRoads = function () {};
-
-  //After map is fully generated:
-  initialize();
+function preload() {
+  this.load.multiatlas(
+    "austin",
+    "../assets/images/skins/austin/austin.json", //Load JSON for respective skin.
+    "../assets/images/skins/austin/" //Set path to load respective PNG files from.
+  );
 }
 
-//ANCHOR Initialize Player
+var anim;
+var frameNames;
+
 /* -------------------------------------------------------------------------- */
-/*                              INITIALIZE PLAYER                             */
+/*                       INITIALIZE GAME DATA AND ASSETS                      */
 /* -------------------------------------------------------------------------- */
 
-function initialize() {
-  //ANCHOR Get Player Data from Server
+function create() {
   /* -------------------------------------------------------------------------- */
-  /*                            ADD PLAYERS TO SERVER                           */
+  /*                             INITIALIZE GLOBALS                             */
   /* -------------------------------------------------------------------------- */
+
+  playerName = this.add.text(0, 0);
+
+  playerCamera = this.cameras.add(0, 0, WIDTH, WIDTH);
+  playerCamera.setZoom(0.6);
+
+  gameObjects.push(playerCamera);
+
+  playerCamera.setBackgroundColor("#bbe773");
+
+  this.keyboard = this.input.keyboard.addKeys("W, A, S, D");
+
+  this.anims.create({
+    key: "idle",
+    repeat: -1,
+    frameRate: 30,
+    frames: this.anims.generateFrameNames("austin", {
+      prefix: "idle_",
+      suffix: ".png",
+      start: 0,
+      end: 49,
+      zeroPad: 3,
+    }),
+  });
+  this.anims.create({
+    key: "walk",
+    repeat: -1,
+    frameRate: 30,
+    frames: this.anims.generateFrameNames("austin", {
+      prefix: "walk_",
+      suffix: ".png",
+      start: 0,
+      end: 49,
+      zeroPad: 3,
+    }),
+  });
+
   var self = this;
   this.socket = io();
   socket = this.socket;
-
-  let userData = {
+  userData = {
     name: localStorage.getItem("Username"),
   };
   socket.emit("playerData", {
     name: userData.name,
   });
 
-  this.otherPlayers = new PIXI.Container();
-  viewport.addChild(self.otherPlayers);
+  this.otherPlayers = this.physics.add.group();
   this.socket.on("currentPlayers", function (players) {
     Object.keys(players).forEach(function (id) {
       if (players[id].playerId === self.socket.id) {
-        setTimeout(addPlayer(self, players[id]), 1000);
-        console.log(userData);
+        addPlayer(self, players[id]);
       } else {
         addOtherPlayers(self, players[id]);
       }
@@ -159,189 +119,95 @@ function initialize() {
     addOtherPlayers(self, playerInfo);
   });
   this.socket.on("disconnect", function (playerId) {
-    viewport.children.forEach(function (otherPlayer) {
+    self.otherPlayers.getChildren().forEach(function (otherPlayer) {
       if (playerId === otherPlayer.playerId) {
         otherPlayer.destroy();
       }
     });
   });
-  this.socket.on("playerMoved", function (playerInfo) {
-    viewport.children.forEach(function (otherPlayer) {
-      if (playerInfo.playerId === otherPlayer.playerId) {
-        //otherPlayer.pivot = playerInfo.rotation;
-        otherPlayer.x = playerInfo.x;
-        otherPlayer.y = playerInfo.y;
-      }
-    });
-  });
 
-  //ANCHOR Add Player (User)
-  /* -------------------------------------------------------------------------- */
-  /*                           ADD PLAYER TO VIEWPORT                           */
-  /* -------------------------------------------------------------------------- */
-
-  function addPlayer(self, playerInfo) {
-    let idle = PIXI.Loader.shared.resources["austin"].spritesheet;
-    let playerSprite = new PIXI.AnimatedSprite(idle.animations["idle"]);
-
-    playerSprite.resolution = 6;
-    playerSprite.animationSpeed = 0.5;
-    playerSprite.scale.set(0.1);
-    playerSprite.play();
-
-    player.addChild(playerSprite);
-
-    /*
-    const playerName = new PIXI.BitmapText(playerInfo.name, {
-      font: "100px Larceny",
-      align: "center",
-    });
-    */
-
-    //player.addChild(playerName);
-    player.x = playerInfo.x;
-    player.y = playerInfo.y;
-    player.vx = playerSettings.speed;
-    player.vy = playerSettings.speed;
-    //player.pivot.x = 185 / 2;
-    //player.pivot.y = 105 / 2;
-
-    playerSettings.rootNode = (player.width / 2, player.height / 2);
-
-    viewport.addChild(primitives);
-    viewport.addChild(player);
-    input();
-  }
-
-  //ANCHOR Add Other Players
-  /* -------------------------------------------------------------------------- */
-  /*                        ADD OTHER PLAYERS TO VIEWPORT                       */
-  /* -------------------------------------------------------------------------- */
-
-  function addOtherPlayers(self, playerInfo) {
-    let idle = PIXI.Loader.shared.resources["austin"].spritesheet;
-    let otherPlayerSprite = new PIXI.AnimatedSprite(idle.animations["idle"]);
-
-    otherPlayerSprite.animationSpeed = 0.5;
-    otherPlayerSprite.scale.set(0.1);
-    otherPlayerSprite.play();
-
-    otherPlayer = self.otherPlayers.addChild(otherPlayerSprite);
-    otherPlayer.playerId = playerInfo.playerId;
-    otherPlayer.x = playerInfo.x;
-    otherPlayer.y = playerInfo.y;
-
-    viewport.addChild(otherPlayer);
-  }
-
-  //ANCHOR Input Function
-  /* -------------------------------------------------------------------------- */
-  /*                            DECLARE INPUT EVENTS                            */
-  /* -------------------------------------------------------------------------- */
-
-  function input() {
-    window.addEventListener("keydown", keysDown);
-    window.addEventListener("keyup", keysUp);
-
-    ticker.update = update.bind(this);
-  }
-
-  function keysDown(e) {
-    keys[e.keyCode] = true;
-  }
-
-  function keysUp(e) {
-    keys[e.keyCode] = false;
-  }
-}
-
-//ANCHOR Update (Tick)
-/* -------------------------------------------------------------------------- */
-/*                                UPDATE (TICK)                               */
-/* -------------------------------------------------------------------------- */
-
-function update(delta) {
-  player.vx = playerSettings.speed;
-  player.vy = playerSettings.speed;
-
-  if (keys["87"]) {
-    player.y -= playerSettings.speed;
-  }
-  if (keys["83"]) {
-    player.y += playerSettings.speed;
-  }
-  if (keys["65"]) {
-    player.x -= playerSettings.speed;
-  }
-  if (keys["68"]) {
-    player.x += playerSettings.speed;
-  }
-
+  // emit player movement
   var x = player.x;
   var y = player.y;
   var r = player.rotation;
-
   if (
     player.oldPosition &&
     (x !== player.oldPosition.x ||
       y !== player.oldPosition.y ||
       r !== player.oldPosition.rotation)
   ) {
-    socket.emit("playerMovement", {
-      x: player.x,
-      y: player.y,
-      rotation: player.rotation,
+    this.socket.emit("playerMovement", {
+      x: this.ship.x,
+      y: this.ship.y,
+      rotation: this.ship.rotation,
     });
   }
-  player.oldPosition = {
-    x: player.x,
-    y: player.y,
-    rotation: player.rotation,
+
+  // save old position data
+  this.ship.oldPosition = {
+    x: this.ship.x,
+    y: this.ship.y,
+    rotation: this.ship.rotation,
   };
-  //zoom();
-  camera();
-  collisionDetection();
-  drawRootNode();
-  renderer.render(viewport);
 }
 
-function zoom() {
-  const scaleDelta = 0.01;
+/* -------------------------------------------------------------------------- */
+/*                                UPDATE METHOD                               */
+/* -------------------------------------------------------------------------- */
 
-  offsetX = -(player.x * scaleDelta);
-  offsetY = -(player.y * scaleDelta);
-
-  const currentScale = viewport.scale.x;
-  let nscale = currentScale + scaleDelta;
-
-  if (nscale < playerSettings.zoom) {
-    playerSprite.pivot.x = 0;
-    playerSprite.pivot.y = 0;
-    viewport.position.x += offsetX;
-    viewport.position.y += offsetY;
-    viewport.scale.set(nscale);
+function update(delta) {
+  if (this.keyboard.D.isDown === true) {
+    player.setVelocityX(playerSettings.speed);
+    animIndex = 1;
   }
+  if (this.keyboard.A.isDown === true) {
+    player.setVelocityX(-playerSettings.speed);
+    animIndex = 1;
+  }
+  if (this.keyboard.W.isDown === true) {
+    player.setVelocityY(-playerSettings.speed);
+    animIndex = 1;
+  }
+  if (this.keyboard.S.isDown === true) {
+    player.setVelocityY(playerSettings.speed);
+    animIndex = 1;
+  }
+
+  //animationController();
 }
 
-function camera() {
-  viewport.follow(player);
-  viewport.setZoom(2);
+function addPlayer(self, playerInfo) {
+  player = self.physics.add
+    .sprite(playerInfo.x, playerInfo.y, "player")
+    .setOrigin(0.5, 0.5)
+    .setScale(scaleRatio, scaleRatio);
+  player.name = userData.name;
+  gameObjects.push(player);
+
+  player.anims.load("walk");
+  player.anims.load("idle");
+  //player.anims.play("idle");
+  console.log(gameObjects);
+  animIndex = 0;
+}
+function addOtherPlayers(self, playerInfo) {
+  const otherPlayer = self.add
+    .sprite(playerInfo.x, playerInfo.y, "otherPlayer")
+    .setOrigin(0.5, 0.5)
+    .setDisplaySize(53, 40);
+  otherPlayer.playerId = playerInfo.playerId;
+  self.otherPlayers.add(otherPlayer);
 }
 
-function spawnFurniture() {
-  let cubby = new PIXI.Sprite.from(PIXI.Loader.shared.resources["cubby2"].url);
-  cubby.x = Math.floor(Math.random() * 700) + 50;
-  cubby.y = Math.floor(Math.random() * 500) + 50;
-  viewport.addChild(cubby);
-}
-
-ticker.start();
-spawnFurniture();
-
-function collisionDetection() {
-  b.hit(player, otherPlayer, true, true);
-}
-
-function drawRootNode() {
-  primitives.drawCircle(playerSettings.rootNode, 2);
+function animationController() {
+  switch (animIndex) {
+    case 0:
+      player.anims.play("idle");
+      break;
+    case 1:
+      player.anims.play("walk");
+      break;
+    default:
+      break;
+  }
 }

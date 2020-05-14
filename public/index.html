@@ -3,12 +3,16 @@
   <head>
     <meta charset="utf-8" />
     <link rel="stylesheet" type="text/css" href="css/style.css" />
-    <title>nerf.io</title>
+    <title>burf.io: suburban warfare</title>
+    <link rel="apple-touch-icon" sizes="180x180" href="assets/web/favicon/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="assets/web/favicon/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="assets/web/favicon/favicon-16x16.png">
+    <link rel="manifest" href="assets/web/favicon/site.webmanifest">
   </head>
 
   <body onload="refresh()">
     <div class="wrapper" id="menu-wrapper">
-    <div class="title"><span>NERF.IO</span></div>
+    <div class="title"><span>burf.io</span></div>
     <div class="form">
       <div class="input=box">
         <input type="text" id="playernameinput" placeholder="Enter a name..." maxlength="13" autocomplete="off" onfocusout="storeUserData()" /></input>
@@ -48,7 +52,7 @@
         document.body.removeChild(wrapper);
       }
     </script>
-
+    <script src="//cdn.jsdelivr.net/npm/phaser@3.23.0/dist/phaser.min.js"></script>
     <script src="/socket.io/socket.io.js"></script>
 
     <script src="assets/lib/pixi.js"></script>

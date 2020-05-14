@@ -46,29 +46,31 @@ h1 {
   font-family: TricksHollow-Italic;
   z-index: 1;
   position: absolute;
-  top: 20%;
+  top: 10%;
   left: 50%;
   -webkit-transform: translate(-50%, -50%);
   transform: translate(-50%, -50%);
 }
 
-.title::after {
+.title span::after {
   font-size: 48pt;
   z-index: -1;
   position: absolute;
   top: 50%;
   left: 50%;
-  content: "NERF.IO";
+  content: "burf.io";
   font-family: Tricks-Italic;
   display: block;
 
-  background: url("../assets/images/pattern.png");
+  background: url("../assets/web/pattern.png");
   -webkit-background-clip: text;
   background-clip: text;
 
   -webkit-text-fill-color: transparent;
-  -webkit-animation: aitf 1s linear reverse infinite;
-  animation: aitf 1s linear reverse infinite;
+  animation: aitf 3s linear infinite;
+  animation-fill-mode: both;
+  animation-direction: reverse;
+  -webkit-animation: aitf 3s linear infinite;
 
   -webkit-transform: translate(-50%, -50%);
   transform: translate(-50%, -50%);
@@ -154,30 +156,45 @@ input::placeholder {
 }
 
 @keyframes tilt {
+  0% {
+    background-position: -100% 50%;
+  }
   25% {
-    transform: rotate(-15deg);
+    background-position: 0% 50%;
   }
   50% {
-    transform: rotate(15deg);
+    background-position: 100% 50%;
   }
   75% {
-    transform: rotate(-15deg);
+    background-position: 0% 50%;
   }
   100% {
-    transform: rotate(15deg);
+    background-position: -100% 50%;
   }
 }
 @keyframes aitf {
   0% {
+    background-position: -100% 50%;
+  }
+  25% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  75% {
     background-position: 0% 50%;
   }
   100% {
-    background-position: 100% 50%;
+    background-position: -100% 50%;
   }
 }
 
 @-webkit-keyframes aitf {
   0% {
+    background-position: -100% 50%;
+  }
+  50% {
     background-position: 0% 50%;
   }
   100% {
