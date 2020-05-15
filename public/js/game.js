@@ -17,6 +17,16 @@ var game = new Phaser.Game({
     preload: preload,
     create: create,
     update: update,
+    pack: {
+      file: [
+        {
+          type: "scenePlugin",
+          key: "SpinePlugin",
+          url: "plugins/SpinePlugin.js",
+          sceneKey: "spine",
+        },
+      ],
+    },
   },
 });
 
@@ -126,29 +136,32 @@ function create() {
     });
   });
 
-  // emit player movement
-  var x = player.x;
-  var y = player.y;
-  var r = player.rotation;
-  if (
-    player.oldPosition &&
-    (x !== player.oldPosition.x ||
-      y !== player.oldPosition.y ||
-      r !== player.oldPosition.rotation)
-  ) {
-    this.socket.emit("playerMovement", {
+  function networkPlayerMovement() {
+    // emit player movement
+    var x = player.x;
+    var y = player.y;
+    var r = player.rotation;
+    if (
+      player.oldPosition &&
+      (x !== player.oldPosition.x ||
+        y !== player.oldPosition.y ||
+        r !== player.oldPosition.rotation)
+    ) {
+      this.socket.emit("playerMovement", {
+        x: this.ship.x,
+        y: this.ship.y,
+        rotation: this.ship.rotation,
+      });
+    }
+
+    // save old position data
+
+    player.oldPosition = {
       x: this.ship.x,
       y: this.ship.y,
       rotation: this.ship.rotation,
-    });
+    };
   }
-
-  // save old position data
-  this.ship.oldPosition = {
-    x: this.ship.x,
-    y: this.ship.y,
-    rotation: this.ship.rotation,
-  };
 }
 
 /* -------------------------------------------------------------------------- */
@@ -158,7 +171,7 @@ function create() {
 function update(delta) {
   if (this.keyboard.D.isDown === true) {
     player.setVelocityX(playerSettings.speed);
-    animIndex = 1;
+    player.anims.play("walk");
   }
   if (this.keyboard.A.isDown === true) {
     player.setVelocityX(-playerSettings.speed);
@@ -181,14 +194,17 @@ function addPlayer(self, playerInfo) {
     .sprite(playerInfo.x, playerInfo.y, "player")
     .setOrigin(0.5, 0.5)
     .setScale(scaleRatio, scaleRatio);
+
+  player.setDrag(100);
+  player.setAngularDrag(100);
+  player.setMaxVelocity(200);
+
   player.name = userData.name;
   gameObjects.push(player);
 
-  player.anims.load("walk");
   player.anims.load("idle");
-  //player.anims.play("idle");
-  console.log(gameObjects);
-  animIndex = 0;
+  player.anims.play();
+  networkPlayerMovement();
 }
 function addOtherPlayers(self, playerInfo) {
   const otherPlayer = self.add
@@ -197,17 +213,4 @@ function addOtherPlayers(self, playerInfo) {
     .setDisplaySize(53, 40);
   otherPlayer.playerId = playerInfo.playerId;
   self.otherPlayers.add(otherPlayer);
-}
-
-function animationController() {
-  switch (animIndex) {
-    case 0:
-      player.anims.play("idle");
-      break;
-    case 1:
-      player.anims.play("walk");
-      break;
-    default:
-      break;
-  }
 }

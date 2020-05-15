@@ -12,8 +12,13 @@ canvas {
 }
 
 @font-face {
-  font-family: Larceny;
-  src: local("Larceny"), url(../assets/fonts/Larceny.ttf);
+  font-family: YetBumbler;
+  src: local("YetBumbler"), url(../assets/fonts/YetBumbler.ttf);
+}
+
+@font-face {
+  font-family: PixelTactical;
+  src: local("PixelTactical"), url(../assets/fonts/PixelTactical.otf);
 }
 
 @font-face {
@@ -38,18 +43,41 @@ h1 {
   font-size: 20px;
 }
 
+.profile-box {
+  width: 160px;
+  height: 45px;
+  position: absolute;
+  top: 0%;
+  left: 0%;
+  margin-left: 20px;
+  background: black;
+  opacity: 0.4;
+  border: 5px solid #ff9429;
+  border-top: 0px;
+  box-shadow: 10px 10px #000000;
+}
+
 .title {
-  color: rgb(0, 0, 0);
   display: block;
+  color: rgb(0, 0, 0);
   content: "NERF.IO";
   font-size: 48pt;
   font-family: TricksHollow-Italic;
   z-index: 1;
   position: absolute;
-  top: 10%;
+  top: 20%;
   left: 50%;
+  width: 245px;
+  height: 65px;
   -webkit-transform: translate(-50%, -50%);
   transform: translate(-50%, -50%);
+  transform-origin: 0;
+
+  animation: tilt 5s forwards linear infinite;
+  -webkit-animation: tilt 5s forwards linear infinite;
+
+  -ms-interpolation-mode: nearest-neighbor;
+  image-rendering: pixelated;
 }
 
 .title span::after {
@@ -58,6 +86,8 @@ h1 {
   position: absolute;
   top: 50%;
   left: 50%;
+  width: 245px;
+  height: 65px;
   content: "burf.io";
   font-family: Tricks-Italic;
   display: block;
@@ -67,10 +97,8 @@ h1 {
   background-clip: text;
 
   -webkit-text-fill-color: transparent;
-  animation: aitf 3s linear infinite;
-  animation-fill-mode: both;
-  animation-direction: reverse;
-  -webkit-animation: aitf 3s linear infinite;
+  animation: aitf 2.5s reverse forwards linear infinite;
+  -webkit-animation: aitf 2.5s reverse forwards linear infinite;
 
   -webkit-transform: translate(-50%, -50%);
   transform: translate(-50%, -50%);
@@ -112,9 +140,9 @@ h1 {
 }
 
 input {
-  font-family: "BluebirdRegular", sans-serif;
-  font-size: 16pt;
-  color: white;
+  font-family: "Tricks-Italic", sans-serif;
+  font-size: 12px;
+  color: rgb(0, 0, 0);
   line-height: 1.3em;
   height: 1.6em;
   margin: 0;
@@ -157,36 +185,44 @@ input::placeholder {
 
 @keyframes tilt {
   0% {
-    background-position: -100% 50%;
+    transform: rotate(0deg) translate(-50%, -50%);
   }
   25% {
-    background-position: 0% 50%;
+    transform: rotate(-10deg) translate(-50%, -50%);
   }
   50% {
-    background-position: 100% 50%;
+    transform: rotate(0deg) translate(-50%, -50%);
   }
   75% {
-    background-position: 0% 50%;
+    transform: rotate(10deg) translate(-50%, -50%);
   }
   100% {
-    background-position: -100% 50%;
+    transform: rotate(0deg) translate(-50%, -50%);
+  }
+}
+@-webkit-keyframes tilt {
+  0% {
+    transform: rotate(0deg) translate(-50%, -50%);
+  }
+  25% {
+    transform: rotate(-10deg) translate(-50%, -50%);
+  }
+  50% {
+    transform: rotate(0deg) translate(-50%, -50%);
+  }
+  75% {
+    transform: rotate(10deg) translate(-50%, -50%);
+  }
+  100% {
+    transform: rotate(0deg) translate(-50%, -50%);
   }
 }
 @keyframes aitf {
   0% {
     background-position: -100% 50%;
   }
-  25% {
-    background-position: 0% 50%;
-  }
-  50% {
-    background-position: 100% 50%;
-  }
-  75% {
-    background-position: 0% 50%;
-  }
   100% {
-    background-position: -100% 50%;
+    background-position: 80% 50%;
   }
 }
 
@@ -194,10 +230,7 @@ input::placeholder {
   0% {
     background-position: -100% 50%;
   }
-  50% {
-    background-position: 0% 50%;
-  }
   100% {
-    background-position: 100% 50%;
+    background-position: 80% 50%;
   }
 }
